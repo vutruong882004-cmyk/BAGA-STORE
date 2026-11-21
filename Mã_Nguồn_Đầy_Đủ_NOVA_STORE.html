@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NOVA STORE - Cửa Hàng Công Nghệ & Thời Trang</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js for Lightweight Reactive State Management -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f6ff',
+                            100: '#e0edff',
+                            500: '#2563eb',
+                            600: '#1d4ed8',
+                            700: '#1e40af',
+                            900: '#1e3a8a',
+                        },
+                        accent: {
+                            500: '#f43f5e',
+                            600: '#e11d48',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        [x-cloak] { display: none !important; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased font-sans min-h-screen flex flex-col justify-between"
+      x-data="ecommerceApp()"
+      x-init="initApp()">
+
+    <!-- ==================== TOAST NOTIFICATION ==================== -->
+    <div class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+        <template x-for="t in toasts" :key="t.id">
+            <div x-show="t.show"
+                 x-transition:enter="transition ease-out duration-300 transform translate-y-2 opacity-0"
+                 x-transition:enter-end="transform translate-y-0 opacity-100"
+                 x-transition:leave="transition ease-in duration-200 transform translate-y-2 opacity-0"
+                 class="pointer-events-auto p-4 rounded-xl shadow-2xl border flex items-center gap-3 backdrop-blur-md"
+                 :class="{
+                    'bg-slate-900/95 text-white border-slate-700': t.type === 'info',
+                    'bg-emerald-900/95 text-emerald-100 border-emerald-700': t.type === 'success',
+                    'bg-rose-900/95 text-rose-100 border-rose-700': t.type === 'error'
+                 }">
+                <i class="fa-solid text-lg" :class="{
+                    'fa-circle-info text-cyan-400': t.type === 'info',
+                    'fa-circle-check text-emerald-400': t.type === 'success',
+                    'fa-triangle-exclamation text-rose-400': t.type === 'error'
+                }"></i>
+                <div class="text-sm font-medium" x-text="t.message"></div>
+            </div>
+        </template>
+    </div>
+
+    <!-- ==================== HEADER & NAVIGATION ==================== -->
+    <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-sm transition-all">
+        <!-- Top Announcement Bar -->
+        <div class="bg-gradient-to-r from-brand-900 via-brand-700 to-indigo-900 text-white text-xs py-1.5 px-4 text-center font-medium">
+            🔥 Ưu đãi chào mừng: Nhập mã <span class="font-bold underline text-amber-300">GIAM10</span> giảm ngay 10% & Miễn phí vận chuyển cho đơn trên 1.000.000 ₫!
+        </div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
+            <div class="flex items-center justify-between gap-4">
+                
+                <!-- Logo -->
+                <a href="#" @click.prevent="resetFilters()" class="flex items-center gap-2.5 group">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-600 flex items-center justify-center text-white text-xl font-black shadow-md shadow-brand-500/20 group-hover:scale-105 transition-transform">
+                        N
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="font-black text-xl tracking-tight text-slate-900 group-hover:text-brand-600 transition-colors">NOVA<span class="text-brand-600">STORE</span></span>
+                        <span class="text-[10px] text-slate-400 font-semibold tracking-widest uppercase -mt-1">Tech & Fashion</span>
+                    </div>
+                </a>
+
+                <!-- Realtime Search Bar (Desktop) -->
+                <div class="hidden md:flex flex-1 max-w-md relative">
+                    <input type="text" 
+                           x-model="searchQuery" 
+                           placeholder="Tìm kiếm sản phẩm theo tên, loại..." 
+                           class="w-full bg-slate-100/80 border border-slate-200 rounded-full pl-10 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                    <button x-show="searchQuery" @click="searchQuery = ''" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <!-- Action Buttons (Admin Toggle & Cart) -->
+                <div class="flex items-center gap-3">
+                    
+                    <!-- Admin Button -->
+                    <button @click="openAdminModal()" 
+                            class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-sm transition-all hover:shadow-md">
+                        <i class="fa-solid" :class="isAdminLoggedIn ? 'fa-shield-halved text-emerald-400' : 'fa-lock text-cyan-400'"></i>
+                        <span class="hidden sm:inline" x-text="isAdminLoggedIn ? 'Quản Lý Shop' : 'Đăng Nhập Admin'"></span>
+                        <span class="text-[10px] px-1.5 py-0.5 rounded font-bold border"
+                              :class="isAdminLoggedIn ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30'"
+                              x-text="isAdminLoggedIn ? 'ĐÃ ĐĂNG NHẬP' : 'ADMIN'"></span>
+                    </button>
+
+                    <!-- Cart Toggle Button -->
+                    <button @click="cartOpen = true" 
+                            class="relative p-2.5 rounded-xl bg-brand-50 hover:bg-brand-100 text-brand-700 transition-colors flex items-center gap-2 font-semibold text-sm">
+                        <i class="fa-solid fa-cart-shopping text-base"></i>
+                        <span class="hidden sm:inline">Giỏ hàng</span>
+                        <span x-show="cartTotalItems > 0" 
+                              x-text="cartTotalItems" 
+                              class="absolute -top-1.5 -right-1.5 bg-accent-500 text-white text-xs font-bold rounded-full h-5 min-w-[20px] px-1 flex items-center justify-center border-2 border-white animate-pulse">
+                        </span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mobile Search Bar -->
+            <div class="mt-3 md:hidden">
+                <div class="relative w-full">
+                    <input type="text" 
+                           x-model="searchQuery" 
+                           placeholder="Tìm kiếm sản phẩm..." 
+                           class="w-full bg-slate-100 border border-slate-200 rounded-full pl-9 pr-8 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                </div>
+            </div>
+
+            <!-- Categories Filter Navigation Bar -->
+            <div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between overflow-x-auto gap-2 no-scrollbar scroll-smooth">
+                <div class="flex items-center gap-1.5">
+                    <template x-for="cat in categories" :key="cat.id">
+                        <button @click="selectedCategory = cat.id"
+                                class="px-3.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all"
+                                :class="selectedCategory === cat.id ? 'bg-brand-600 text-white shadow-sm font-semibold' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'">
+                            <span x-text="cat.name"></span>
+                        </button>
+                    </template>
+                </div>
+
+                <!-- Sort Dropdown -->
+                <div class="flex items-center gap-2 min-w-max ml-2">
+                    <span class="text-xs text-slate-400 font-medium hidden sm:inline">Sắp xếp:</span>
+                    <select x-model="sortBy" class="bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs py-1.5 px-2.5 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                        <option value="default">Nổi bật nhất</option>
+                        <option value="price-asc">Giá: Thấp đến Cao</option>
+                        <option value="price-desc">Giá: Cao đến Thấp</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ==================== HERO PROMO BANNER ==================== -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+        <div class="relative rounded-3xl overflow-hidden bg-gradient-to-r from-slate-900 via-indigo-950 to-brand-950 text-white p-8 sm:p-12 shadow-xl border border-slate-800">
+            <!-- Background Glow Effect -->
+            <div class="absolute -top-24 -right-24 w-96 h-96 bg-brand-500/20 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute -bottom-24 -left-24 w-96 h-96 bg-accent-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="relative z-10 max-w-xl">
+                <span class="inline-block px-3 py-1 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30 text-xs font-semibold uppercase tracking-wider mb-3">
+                    Bộ Sưu Tập Công Nghệ & Thời Trang 2026
+                </span>
+                <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight text-white mb-4">
+                    Nâng Tầm Phong Cách & Công Nghệ Của Bạn
+                </h1>
+                <p class="text-slate-300 text-sm sm:text-base mb-6 leading-relaxed">
+                    Khám phá hàng loạt sản phẩm công nghệ đỉnh cao và trang phục thời thượng. Đảm bảo chính hãng 100%, giao hàng siêu tốc toàn quốc.
+                </p>
+                <div class="flex flex-wrap items-center gap-3">
+                    <a href="#products-section" class="px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm shadow-lg shadow-brand-600/30 transition-all hover:scale-105">
+                        <i class="fa-solid fa-bag-shopping mr-2"></i>Mua Sắm Ngay
+                    </a>
+                    <button @click="openAdminModal()" class="px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs transition-all">
+                        <i class="fa-solid fa-lock mr-2 text-emerald-400"></i>Đăng Nhập Quản Trị (Admin)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== PRODUCT GRID SECTION ==================== -->
+    <main id="products-section" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-1">
+        
+        <!-- Section Header -->
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h2 class="text-2xl font-bold text-slate-900 tracking-tight">Danh Sách Sản Phẩm</h2>
+                <p class="text-xs text-slate-500 mt-1" x-text="`Hiển thị ${filteredProducts.length} sản phẩm phù hợp`"></p>
+            </div>
+            
+            <button x-show="selectedCategory !== 'all' || searchQuery !== ''" 
+                    @click="resetFilters()" 
+                    class="text-xs text-brand-600 hover:underline font-semibold flex items-center gap-1">
+                <i class="fa-solid fa-rotate-left"></i> Xóa bộ lọc
+            </button>
+        </div>
+
+        <!-- Empty State -->
+        <div x-show="filteredProducts.length === 0" class="bg-white border border-slate-200 rounded-3xl p-12 text-center max-w-md mx-auto shadow-sm">
+            <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400 text-2xl mb-4">
+                <i class="fa-solid fa-box-open"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-800 mb-1">Không tìm thấy sản phẩm</h3>
+            <p class="text-xs text-slate-500 mb-4">Thử tìm kiếm với từ khóa khác hoặc chuyển danh mục sản phẩm.</p>
+            <button @click="resetFilters()" class="px-4 py-2 rounded-xl bg-brand-600 text-white text-xs font-semibold">Tải lại danh sách</button>
+        </div>
+
+        <!-- Product Cards Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <template x-for="product in filteredProducts" :key="product.id">
+                <div class="group bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between">
+                    
+                    <!-- Product Image Container -->
+                    <div class="relative aspect-square overflow-hidden bg-slate-100">
+                        <img :src="product.image" 
+                             :alt="product.name"
+                             class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                             @error="$event.target.src='https://placehold.co/600x600/f1f5f9/475569?text=NOVA+STORE'">
+                        
+                        <!-- Badges -->
+                        <div class="absolute top-3 left-3 flex flex-col gap-1">
+                            <span x-show="product.originalPrice > product.price" 
+                                  class="px-2.5 py-1 rounded-md bg-accent-500 text-white font-black text-[10px] uppercase shadow-md">
+                                -<span x-text="Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)"></span>%
+                            </span>
+                            <span x-show="product.badge" 
+                                  x-text="product.badge"
+                                  class="px-2.5 py-1 rounded-md bg-slate-900 text-white font-bold text-[10px] uppercase shadow-md">
+                            </span>
+                        </div>
+
+                        <!-- Quick Action Buttons -->
+                        <div class="absolute inset-0 bg-slate-900/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 backdrop-blur-[2px]">
+                            <button @click="openDetailModal(product)" 
+                                    class="w-10 h-10 rounded-full bg-white text-slate-900 hover:bg-brand-600 hover:text-white flex items-center justify-center shadow-lg transition-transform hover:scale-110"
+                                    title="Xem chi tiết">
+                                <i class="fa-solid fa-eye text-sm"></i>
+                            </button>
+                            <button @click="addToCart(product)" 
+                                    class="w-10 h-10 rounded-full bg-brand-600 text-white hover:bg-brand-700 flex items-center justify-center shadow-lg transition-transform hover:scale-110"
+                                    title="Thêm vào giỏ">
+                                <i class="fa-solid fa-cart-plus text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Product Info -->
+                    <div class="p-4 flex-1 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+                                <span class="font-medium text-brand-600" x-text="product.category"></span>
+                                <div class="flex items-center text-amber-400 gap-1 text-[11px]">
+                                    <i class="fa-solid fa-star"></i>
+                                    <span class="font-semibold text-slate-700" x-text="product.rating || '5.0'"></span>
+                                </div>
+                            </div>
+
+                            <h3 class="font-bold text-slate-900 text-sm line-clamp-2 hover:text-brand-600 cursor-pointer transition-colors" 
+                                @click="openDetailModal(product)"
+                                x-text="product.name"></h3>
+                        </div>
+
+                        <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                            <div>
+                                <div class="text-base font-extrabold text-brand-700" x-text="formatCurrency(product.price)"></div>
+                                <div x-show="product.originalPrice > product.price" 
+                                     class="text-xs text-slate-400 line-through" 
+                                     x-text="formatCurrency(product.originalPrice)"></div>
+                            </div>
+                            <button @click="addToCart(product)" 
+                                    class="px-3 py-1.5 rounded-lg bg-brand-50 hover:bg-brand-600 text-brand-700 hover:text-white text-xs font-bold transition-colors">
+                                Thêm +
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </main>
+
+    <!-- ==================== PRODUCT DETAIL MODAL ==================== -->
+    <div x-show="detailModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+        <div @click.away="detailModalOpen = false" 
+             x-show="detailModalOpen"
+             x-transition:enter="transition ease-out duration-300 transform scale-95 opacity-0"
+             x-transition:enter-end="transform scale-100 opacity-100"
+             class="bg-white rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl border border-slate-100 relative">
+            
+            <button @click="detailModalOpen = false" class="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900 flex items-center justify-center">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <template x-if="selectedProduct">
+                <div class="grid grid-cols-1 md:grid-cols-2">
+                    <div class="bg-slate-100 aspect-square md:aspect-auto">
+                        <img :src="selectedProduct.image" :alt="selectedProduct.name" class="w-full h-full object-cover">
+                    </div>
+                    <div class="p-6 flex flex-col justify-between">
+                        <div>
+                            <span class="text-xs font-semibold text-brand-600 uppercase tracking-wider" x-text="selectedProduct.category"></span>
+                            <h2 class="text-xl font-bold text-slate-900 mt-1 mb-2" x-text="selectedProduct.name"></h2>
+                            
+                            <div class="flex items-center gap-2 mb-4">
+                                <div class="text-2xl font-black text-brand-700" x-text="formatCurrency(selectedProduct.price)"></div>
+                                <div x-show="selectedProduct.originalPrice > selectedProduct.price" class="text-sm text-slate-400 line-through" x-text="formatCurrency(selectedProduct.originalPrice)"></div>
+                            </div>
+
+                            <p class="text-xs text-slate-600 leading-relaxed mb-6" x-text="selectedProduct.description || 'Sản phẩm chất lượng cao đến từ thương hiệu NOVA. Đảm bảo bảo hành 12 tháng chính hãng.'"></p>
+
+                            <!-- Quantity Selector -->
+                            <div class="mb-6">
+                                <label class="block text-xs font-semibold text-slate-700 mb-2">Số lượng mua:</label>
+                                <div class="flex items-center gap-3">
+                                    <div class="flex items-center border border-slate-300 rounded-xl overflow-hidden">
+                                        <button @click="modalQty = Math.max(1, modalQty - 1)" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-sm">-</button>
+                                        <span class="px-4 py-1.5 font-bold text-sm text-slate-800" x-text="modalQty"></span>
+                                        <button @click="modalQty++" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-sm">+</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button @click="addToCart(selectedProduct, modalQty); detailModalOpen = false;" 
+                                class="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm shadow-lg shadow-brand-600/30 transition-all">
+                            <i class="fa-solid fa-cart-plus mr-2"></i>Thêm Vào Giỏ Hàng
+                        </button>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- ==================== SLIDE-OVER CART DRAWER ==================== -->
+    <div x-show="cartOpen" x-cloak class="fixed inset-0 z-50 overflow-hidden">
+        <div class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity" @click="cartOpen = false"></div>
+
+        <div class="fixed inset-y-0 right-0 max-w-full flex pl-10">
+            <div x-show="cartOpen" 
+                 x-transition:enter="transform transition ease-in-out duration-300"
+                 x-transition:enter-start="translate-x-full"
+                 x-transition:enter-end="translate-x-0"
+                 x-transition:leave="transform transition ease-in-out duration-300"
+                 x-transition:leave-start="translate-x-0"
+                 x-transition:leave-end="translate-x-full"
+                 class="w-screen max-w-md bg-white shadow-2xl flex flex-col justify-between">
+                
+                <!-- Drawer Header -->
+                <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-bag-shopping text-brand-600 text-lg"></i>
+                        <h3 class="font-bold text-slate-900 text-base">Giỏ Hàng Của Bạn</h3>
+                        <span class="text-xs bg-brand-100 text-brand-700 font-bold px-2 py-0.5 rounded-full" x-text="`${cartTotalItems} món`"></span>
+                    </div>
+                    <button @click="cartOpen = false" class="w-8 h-8 rounded-full bg-slate-200/60 hover:bg-slate-200 text-slate-600 flex items-center justify-center">
+                        <i class="fa-solid fa-xmark text-sm"></i>
+                    </button>
+                </div>
+
+                <!-- Cart Items List -->
+                <div class="flex-1 overflow-y-auto p-4 space-y-4">
+                    <template x-show="cart.length === 0">
+                        <div class="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400">
+                            <i class="fa-solid fa-cart-arrow-down text-5xl mb-3 text-slate-300"></i>
+                            <p class="font-semibold text-slate-600 text-sm">Giỏ hàng của bạn đang trống!</p>
+                            <p class="text-xs text-slate-400 mt-1 mb-4">Hãy chọn thêm vài sản phẩm yêu thích nhé.</p>
+                            <button @click="cartOpen = false" class="px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-bold">Tiếp tục mua sắm</button>
+                        </div>
+                    </template>
+
+                    <template x-for="(item, index) in cart" :key="index">
+                        <div class="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-100 relative group">
+                            <img :src="item.product.image" class="w-16 h-16 rounded-xl object-cover bg-white">
+                            <div class="flex-1">
+                                <h4 class="font-bold text-xs text-slate-800 line-clamp-1" x-text="item.product.name"></h4>
+                                <div class="text-xs font-bold text-brand-700 mt-0.5" x-text="formatCurrency(item.product.price)"></div>
+                                
+                                <div class="flex items-center justify-between mt-2">
+                                    <div class="flex items-center border border-slate-200 bg-white rounded-lg overflow-hidden">
+                                        <button @click="updateCartQty(index, -1)" class="px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-100 font-bold">-</button>
+                                        <span class="px-2 text-xs font-bold text-slate-800" x-text="item.quantity"></span>
+                                        <button @click="updateCartQty(index, 1)" class="px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-100 font-bold">+</button>
+                                    </div>
+                                    <button @click="removeFromCart(index)" class="text-xs text-rose-500 hover:text-rose-700 font-medium">
+                                        <i class="fa-solid fa-trash-can mr-1"></i>Xóa
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Coupon & Order Summary Footer -->
+                <div x-show="cart.length > 0" class="p-4 border-t border-slate-200 bg-slate-50/50 space-y-3">
+                    
+                    <!-- Coupon Input -->
+                    <div class="flex gap-2">
+                        <input type="text" x-model="couponInput" placeholder="Mã giảm giá (GIAM10)" class="flex-1 uppercase text-xs px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-500">
+                        <button @click="applyCoupon()" class="px-3 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800">Áp dụng</button>
+                    </div>
+
+                    <div x-show="appliedCoupon" class="flex justify-between items-center text-xs text-emerald-600 bg-emerald-50 p-2 rounded-lg border border-emerald-200 font-semibold">
+                        <span><i class="fa-solid fa-ticket mr-1"></i>Đã áp dụng: <b x-text="appliedCoupon.code"></b></span>
+                        <button @click="appliedCoupon = null" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+
+                    <!-- Price Calculations -->
+                    <div class="space-y-1.5 text-xs text-slate-600 pt-2 border-t border-slate-200">
+                        <div class="flex justify-between">
+                            <span>Tạm tính:</span>
+                            <span class="font-semibold text-slate-800" x-text="formatCurrency(cartSubtotal)"></span>
+                        </div>
+                        <div x-show="cartDiscount > 0" class="flex justify-between text-emerald-600">
+                            <span>Giảm giá:</span>
+                            <span class="font-semibold" x-text="`- ${formatCurrency(cartDiscount)}`"></span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Phí vận chuyển:</span>
+                            <span class="font-semibold text-slate-800" x-text="shippingFee === 0 ? 'Miễn phí' : formatCurrency(shippingFee)"></span>
+                        </div>
+                        <div class="flex justify-between text-sm font-extrabold text-slate-900 pt-2 border-t border-slate-200">
+                            <span>TỔNG THANH TOÁN:</span>
+                            <span class="text-brand-700 text-base" x-text="formatCurrency(cartTotal)"></span>
+                        </div>
+                    </div>
+
+                    <button @click="cartOpen = false; checkoutOpen = true;" class="w-full py-3.5 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white rounded-2xl font-bold text-sm shadow-lg shadow-brand-600/30 transition-all flex items-center justify-center gap-2">
+                        <span>Tiến Hành Đặt Hàng</span>
+                        <i class="fa-solid fa-arrow-right text-xs"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== CHECKOUT MODAL ==================== -->
+    <div x-show="checkoutOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto">
+        <div @click.away="checkoutOpen = false" class="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl relative my-8">
+            <button @click="checkoutOpen = false" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <h3 class="text-xl font-bold text-slate-900 mb-1 flex items-center gap-2">
+                <i class="fa-solid fa-credit-card text-brand-600"></i> Thông Tin Thanh Toán
+            </h3>
+            <p class="text-xs text-slate-500 mb-6">Vui lòng điền chính xác thông tin giao hàng để hoàn tất đơn hàng.</p>
+
+            <form @submit.prevent="processCheckout()" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Họ và Tên *</label>
+                    <input type="text" required x-model="checkoutForm.name" placeholder="Nguyễn Văn A" class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Số Điện Thoại *</label>
+                        <input type="tel" required x-model="checkoutForm.phone" placeholder="0912345678" class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Phương Thức Thanh Toán</label>
+                        <select x-model="checkoutForm.paymentMethod" class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                            <option value="COD">Thanh toán khi nhận hàng (COD)</option>
+                            <option value="BANK">Chuyển khoản Ngân hàng (QR Code)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Địa Chỉ Giao Hàng Chi Tiết *</label>
+                    <textarea required x-model="checkoutForm.address" rows="2" placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành..." class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"></textarea>
+                </div>
+
+                <!-- Dynamic QR Bank Display if BANK option selected -->
+                <div x-show="checkoutForm.paymentMethod === 'BANK'" class="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col sm:flex-row items-center gap-4">
+                    <img :src="`https://api.vietqr.io/image/970422-0123456789-compact.png?amount=${cartTotal}&addInfo=NOVASTORE`" class="w-32 h-32 rounded-xl border border-slate-200 object-contain bg-white">
+                    <div class="text-xs text-slate-600 space-y-1 text-center sm:text-left">
+                        <p class="font-bold text-slate-800">Thông tin chuyển khoản nhanh:</p>
+                        <p>Ngân hàng: <b>MB Bank</b></p>
+                        <p>Số tài khoản: <b class="text-brand-700">0123456789</b></p>
+                        <p>Chủ tài khoản: <b>NOVA STORE OFFICIAL</b></p>
+                        <p class="text-[11px] text-amber-600 italic">Quét mã QR để tự động nhập đúng số tiền!</p>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-slate-200 flex items-center justify-between">
+                    <div>
+                        <span class="text-xs text-slate-500">Tổng thanh toán:</span>
+                        <div class="text-xl font-black text-brand-700" x-text="formatCurrency(cartTotal)"></div>
+                    </div>
+                    <button type="submit" class="px-6 py-3 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-sm shadow-lg shadow-brand-600/30">
+                        Xác Nhận Đặt Hàng
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== ORDER SUCCESS MODAL ==================== -->
+    <div x-show="orderSuccessOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
+        <div class="bg-white rounded-3xl max-w-md w-full p-8 text-center shadow-2xl relative">
+            <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-3xl mb-4 animate-bounce">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <h3 class="text-2xl font-black text-slate-900 mb-1">Đặt Hàng Thành Công!</h3>
+            <p class="text-xs text-slate-500 mb-6">Cảm ơn bạn đã mua sắm tại NOVA STORE. Đơn hàng của bạn đang được hệ thống xử lý nhanh chóng.</p>
+            <button @click="orderSuccessOpen = false" class="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-sm">
+                Quay Lại Trang Chủ
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== ADMIN LOGIN MODAL ==================== -->
+    <div x-show="adminLoginOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md">
+        <div @click.away="adminLoginOpen = false" 
+             x-show="adminLoginOpen"
+             x-transition:enter="transition ease-out duration-300 transform scale-95 opacity-0"
+             x-transition:enter-end="transform scale-100 opacity-100"
+             class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 relative">
+            
+            <button @click="adminLoginOpen = false" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <div class="text-center mb-6">
+                <div class="w-14 h-14 rounded-2xl bg-slate-900 text-cyan-400 flex items-center justify-center mx-auto text-2xl mb-3 shadow-lg">
+                    <i class="fa-solid fa-user-shield"></i>
+                </div>
+                <h3 class="text-xl font-black text-slate-900">Đăng Nhập Quản Trị Viên</h3>
+                <p class="text-xs text-slate-500 mt-1">Vui lòng xác thực tài khoản Admin để quản lý cửa hàng</p>
+            </div>
+
+            <form @submit.prevent="loginAdmin()" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Tên đăng nhập *</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-user absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="text" required x-model="loginForm.username" placeholder="Nhập tên đăng nhập..." class="w-full pl-9 pr-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Mật khẩu *</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-key absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input :type="showPassword ? 'text' : 'password'" required x-model="loginForm.password" placeholder="Nhập mật khẩu..." class="w-full pl-9 pr-10 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                        <button type="button" @click="showPassword = !showPassword" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs">
+                            <i class="fa-solid" :class="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Default Account Hint Box -->
+                <div class="p-3 rounded-xl bg-brand-50 border border-brand-100 text-xs text-brand-900 flex items-start gap-2.5">
+                    <i class="fa-solid fa-circle-info text-brand-600 mt-0.5"></i>
+                    <div>
+                        <p class="font-bold">Tài khoản Admin mặc định:</p>
+                        <p class="mt-0.5">Tài khoản: <code class="bg-white px-1.5 py-0.5 rounded font-bold text-brand-700 border border-brand-200">admin</code></p>
+                        <p class="mt-0.5">Mật khẩu: <code class="bg-white px-1.5 py-0.5 rounded font-bold text-brand-700 border border-brand-200">admin123</code></p>
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-sm shadow-lg transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-right-to-bracket text-cyan-400"></i>
+                    <span>Đăng Nhập Hệ Thống</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== ADMIN DASHBOARD MODAL ==================== -->
+    <div x-show="adminOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
+        <div @click.away="adminOpen = false" class="bg-white rounded-3xl max-w-5xl w-full h-[90vh] flex flex-col shadow-2xl overflow-hidden relative">
+            
+            <!-- Admin Header -->
+            <div class="p-4 sm:p-6 bg-slate-900 text-white flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center border border-cyan-500/30 font-bold">
+                        <i class="fa-solid fa-sliders text-lg"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="font-bold text-lg leading-none">Bảng Quản Trị Cửa Hàng</h3>
+                            <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/30">
+                                Xin chào, <span x-text="adminCredentials.username"></span>
+                            </span>
+                        </div>
+                        <span class="text-xs text-slate-400">Tự do Thêm, Sửa, Xóa Sản Phẩm & Quản Lý Đơn Hàng</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button @click="logoutAdmin()" class="px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 text-xs font-bold flex items-center gap-1.5 transition-colors">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span class="hidden sm:inline">Đăng xuất</span>
+                    </button>
+                    <button @click="adminOpen = false" class="w-9 h-9 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Admin Navigation Tabs -->
+            <div class="bg-slate-100 px-6 py-2 border-b border-slate-200 flex gap-2 overflow-x-auto">
+                <button @click="adminTab = 'products'" class="px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap" :class="adminTab === 'products' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:bg-slate-200'">
+                    <i class="fa-solid fa-box mr-1.5"></i>Danh Sách Sản Phẩm (<span x-text="products.length"></span>)
+                </button>
+                <button @click="openAddProductForm()" class="px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap" :class="adminTab === 'form' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:bg-slate-200'">
+                    <i class="fa-solid fa-plus-circle mr-1.5 text-emerald-600"></i>Thêm / Sửa Sản Phẩm
+                </button>
+                <button @click="adminTab = 'orders'" class="px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap" :class="adminTab === 'orders' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:bg-slate-200'">
+                    <i class="fa-solid fa-receipt mr-1.5 text-brand-600"></i>Đơn Hàng (<span x-text="orders.length"></span>)
+                </button>
+                <button @click="adminTab = 'account'" class="px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap" :class="adminTab === 'account' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:bg-slate-200'">
+                    <i class="fa-solid fa-user-lock mr-1.5 text-amber-600"></i>Tài Khoản & Bảo Mật
+                </button>
+                <button @click="adminTab = 'backup'" class="px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap" :class="adminTab === 'backup' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:bg-slate-200'">
+                    <i class="fa-solid fa-database mr-1.5 text-purple-600"></i>Sao Lưu & Khôi Phục
+                </button>
+            </div>
+
+            <!-- Admin Tab Content Body -->
+            <div class="flex-1 overflow-y-auto p-6 bg-slate-50">
+                
+                <!-- TAB 1: PRODUCTS LIST -->
+                <div x-show="adminTab === 'products'" class="space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h4 class="font-bold text-slate-800 text-sm">Tất cả sản phẩm hiện có</h4>
+                        <button @click="openAddProductForm()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold">
+                            + Thêm Mới
+                        </button>
+                    </div>
+
+                    <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                        <table class="w-full text-left text-xs text-slate-600">
+                            <thead class="bg-slate-100 text-slate-700 uppercase font-bold border-b border-slate-200">
+                                <tr>
+                                    <th class="p-3.5">Sản Phẩm</th>
+                                    <th class="p-3.5">Danh Mục</th>
+                                    <th class="p-3.5">Giá Bán</th>
+                                    <th class="p-3.5 text-right">Thao Tác</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <template x-for="p in products" :key="p.id">
+                                    <tr class="hover:bg-slate-50/80">
+                                        <td class="p-3.5 flex items-center gap-3">
+                                            <img :src="p.image" class="w-10 h-10 rounded-lg object-cover bg-slate-100">
+                                            <div>
+                                                <div class="font-bold text-slate-900" x-text="p.name"></div>
+                                                <span x-show="p.badge" class="text-[10px] px-1.5 py-0.2 rounded bg-slate-200 font-semibold" x-text="p.badge"></span>
+                                            </div>
+                                        </td>
+                                        <td class="p-3.5 font-medium text-slate-700" x-text="p.category"></td>
+                                        <td class="p-3.5 font-bold text-brand-700" x-text="formatCurrency(p.price)"></td>
+                                        <td class="p-3.5 text-right space-x-2">
+                                            <button @click="editProduct(p)" class="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg font-bold">Sửa</button>
+                                            <button @click="requestConfirm('Bạn có chắc chắn muốn xóa sản phẩm này?', () => deleteProduct(p.id))" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg font-bold">Xóa</button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB 2: ADD / EDIT PRODUCT FORM -->
+                <div x-show="adminTab === 'form'" class="max-w-2xl mx-auto bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+                    <h4 class="font-bold text-slate-900 text-base mb-4" x-text="productForm.id ? 'Chỉnh Sửa Sản Phẩm' : 'Đăng Sản Phẩm Mới'"></h4>
+                    
+                    <form @submit.prevent="saveProduct()" class="space-y-4 text-xs">
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Tên Sản Phẩm *</label>
+                            <input type="text" required x-model="productForm.name" placeholder="Nhập tên sản phẩm..." class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block font-bold text-slate-700 mb-1">Danh Mục *</label>
+                                <select x-model="productForm.category" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                                    <option value="Công nghệ">Công nghệ</option>
+                                    <option value="Thời trang">Thời trang</option>
+                                    <option value="Phụ kiện">Phụ kiện</option>
+                                    <option value="Gia dụng">Gia dụng</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block font-bold text-slate-700 mb-1">Nhãn Badge (Tùy chọn)</label>
+                                <input type="text" x-model="productForm.badge" placeholder="MỚI, HOT, BESTSELLER..." class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block font-bold text-slate-700 mb-1">Giá Bán (VNĐ) *</label>
+                                <input type="number" min="0" step="any" required x-model.number="productForm.price" placeholder="Nhập giá bán không giới hạn..." class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                                <p x-show="productForm.price > 0" class="text-[11px] font-bold text-brand-600 mt-1">
+                                    Hiển thị: <span x-text="formatCurrency(productForm.price)"></span>
+                                </p>
+                            </div>
+                            <div>
+                                <label class="block font-bold text-slate-700 mb-1">Giá Gốc Gạch Ngang (Tùy chọn)</label>
+                                <input type="number" min="0" step="any" x-model.number="productForm.originalPrice" placeholder="Nhập giá gốc không giới hạn..." class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                                <p x-show="productForm.originalPrice > 0" class="text-[11px] font-semibold text-slate-500 mt-1">
+                                    Hiển thị: <span x-text="formatCurrency(productForm.originalPrice)"></span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Image Input (URL or Upload File) -->
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Hình Ảnh Sản Phẩm (URL hoặc Tải Ảnh Lên) *</label>
+                            <div class="flex flex-col sm:flex-row gap-2">
+                                <input type="text" required x-model="productForm.image" placeholder="https://... hoặc chọn tệp ảnh bên cạnh" class="flex-1 p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                                <label class="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl font-bold cursor-pointer text-center whitespace-nowrap">
+                                    <i class="fa-solid fa-upload mr-1"></i>Tải Ảnh
+                                    <input type="file" accept="image/*" @change="handleFileUpload($event)" class="hidden">
+                                </label>
+                            </div>
+                            <div x-show="productForm.image" class="mt-2 flex items-center gap-3">
+                                <img :src="productForm.image" alt="Xem trước ảnh" class="w-16 h-16 rounded-xl object-cover border border-slate-200 bg-slate-50" @error="$event.target.src='https://placehold.co/150x150/f1f5f9/475569?text=Preview'">
+                                <span class="text-[11px] text-slate-500">Xem trước hình ảnh sản phẩm</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Mô Tả Chi Tiết</label>
+                            <textarea x-model="productForm.description" rows="3" placeholder="Mô tả đặc điểm nổi bật, bảo hành, chất liệu..." class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"></textarea>
+                        </div>
+
+                        <div class="pt-2 flex items-center justify-end gap-2">
+                            <button type="button" @click="adminTab = 'products'" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl">
+                                Hủy
+                            </button>
+                            <button type="submit" class="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl shadow-md">
+                                <i class="fa-solid fa-check mr-1.5"></i><span x-text="productForm.id ? 'Lưu Cập Nhật' : 'Đăng Sản Phẩm'"></span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- TAB 3: ORDERS -->
+                <div x-show="adminTab === 'orders'" class="space-y-4">
+                    <h4 class="font-bold text-slate-800 text-sm">Danh sách đơn hàng của khách</h4>
+                    <div x-show="orders.length === 0" class="bg-white border border-slate-200 rounded-2xl p-8 text-center text-xs text-slate-500">
+                        Chưa có đơn hàng nào được đặt.
+                    </div>
+                    <div class="space-y-3">
+                        <template x-for="order in orders" :key="order.id">
+                            <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm text-xs space-y-2">
+                                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                                    <div>
+                                        <span class="font-bold text-slate-900">Đơn #<span x-text="order.id"></span></span>
+                                        <span class="text-slate-400 ml-2" x-text="order.date"></span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold" x-text="order.status"></span>
+                                        <span class="font-extrabold text-brand-700" x-text="formatCurrency(order.total)"></span>
+                                    </div>
+                                </div>
+                                <div class="text-slate-600">
+                                    <b>Khách hàng:</b> <span x-text="order.customer.name"></span> - <span x-text="order.customer.phone"></span> (<span x-text="order.customer.paymentMethod"></span>)
+                                </div>
+                                <div class="text-slate-500">
+                                    <b>Địa chỉ:</b> <span x-text="order.customer.address"></span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- TAB 4: ACCOUNT & SECURITY -->
+                <div x-show="adminTab === 'account'" class="max-w-xl mx-auto bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+                    <h4 class="font-bold text-slate-900 text-base mb-4">Đổi Tên Đăng Nhập & Mật Khẩu Admin</h4>
+                    <form @submit.prevent="changeAdminCredentials()" class="space-y-4 text-xs">
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Tên đăng nhập Admin *</label>
+                            <input type="text" required x-model="accountForm.newUsername" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Mật khẩu hiện tại *</label>
+                            <input type="password" required x-model="accountForm.currentPassword" placeholder="Nhập mật khẩu hiện tại..." class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block font-bold text-slate-700 mb-1">Mật khẩu mới *</label>
+                                <input type="password" required x-model="accountForm.newPassword" placeholder="Ít nhất 6 ký tự..." class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block font-bold text-slate-700 mb-1">Xác nhận mật khẩu mới *</label>
+                                <input type="password" required x-model="accountForm.confirmPassword" placeholder="Nhập lại mật khẩu mới..." class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                            </div>
+                        </div>
+
+                        <div class="pt-2 flex justify-end">
+                            <button type="submit" class="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl">
+                                <i class="fa-solid fa-floppy-disk mr-1.5 text-cyan-400"></i>Cập Nhật Tài Khoản
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- TAB 5: BACKUP & RESTORE -->
+                <div x-show="adminTab === 'backup'" class="max-w-xl mx-auto bg-white border border-slate-200 rounded-3xl p-6 space-y-6">
+                    <div>
+                        <h4 class="font-bold text-slate-900 mb-1">Sao Lưu Dữ Liệu JSON</h4>
+                        <p class="text-xs text-slate-500 mb-3">Tải xuống hoặc dán dữ liệu JSON sản phẩm để sao lưu.</p>
+                        <div class="flex gap-2">
+                            <button @click="exportData()" class="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold">Xuất File JSON</button>
+                            <button @click="requestConfirm('Khôi phục danh sách sản phẩm mẫu ban đầu? Dữ liệu hiện tại sẽ bị ghi đè.', () => resetDefaultProducts())" class="px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-bold">Khôi Phục Sản Phẩm Mẫu Ban Đầu</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== CUSTOM CONFIRMATION DIALOG ==================== -->
+    <div x-show="confirmModal.open" x-cloak class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl border border-slate-100">
+            <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto text-xl mb-3">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h4 class="font-bold text-slate-900 text-base mb-1">Xác Nhận Thao Tác</h4>
+            <p class="text-xs text-slate-500 mb-5" x-text="confirmModal.message"></p>
+            <div class="flex gap-3">
+                <button @click="confirmModal.open = false" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">Hủy Bỏ</button>
+                <button @click="executeConfirm()" class="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs">Đồng Ý</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== FOOTER ==================== -->
+    <footer class="bg-slate-900 text-slate-400 text-xs py-12 border-t border-slate-800 mt-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+            <div>
+                <div class="flex items-center gap-2 mb-3">
+                    <div class="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center text-white font-black text-base">N</div>
+                    <span class="font-black text-lg text-white tracking-tight">NOVASTORE</span>
+                </div>
+                <p class="text-slate-400 leading-relaxed">Hệ thống bán lẻ Công nghệ & Thời trang uy tín hàng đầu. Cam kết mang đến trải nghiệm tuyệt vời cho khách hàng.</p>
+            </div>
+            <div>
+                <h4 class="font-bold text-white mb-3 text-sm">Danh Mục</h4>
+                <ul class="space-y-2">
+                    <li><a href="#" @click.prevent="selectedCategory='Công nghệ'" class="hover:text-white">Thiết bị Công nghệ</a></li>
+                    <li><a href="#" @click.prevent="selectedCategory='Thời trang'" class="hover:text-white">Thời trang Nam / Nữ</a></li>
+                    <li><a href="#" @click.prevent="selectedCategory='Phụ kiện'" class="hover:text-white">Phụ kiện Độc lạ</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-bold text-white mb-3 text-sm">Hỗ Trợ Khách Hàng</h4>
+                <ul class="space-y-2">
+                    <li><a href="#" class="hover:text-white">Chính sách đổi trả trong 30 ngày</a></li>
+                    <li><a href="#" class="hover:text-white">Chính sách bảo hành chính hãng</a></li>
+                    <li><a href="#" class="hover:text-white">Hướng dẫn thanh toán QR</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-bold text-white mb-3 text-sm">Liên Hệ Store</h4>
+                <p class="mb-2"><i class="fa-solid fa-location-dot mr-2"></i>123 Đường Công Nghệ, Quận 1, TP. Hồ Chí Minh</p>
+                <p class="mb-2"><i class="fa-solid fa-phone mr-2"></i>Hotline: 1900 8888</p>
+                <p><i class="fa-solid fa-envelope mr-2"></i>Email: support@novastore.vn</p>
+            </div>
+        </div>
+        <div class="max-w-7xl mx-auto px-4 text-center border-t border-slate-800 pt-6 text-slate-500">
+            © 2026 NOVA STORE. All rights reserved. Designed for excellence.
+        </div>
+    </footer>
+
+    <!-- ==================== JAVASCRIPT STATE ENGINE ==================== -->
+    <script>
+        // Sample Default Initial Products
+        const DEFAULT_PRODUCTS = [
+            {
+                id: 1,
+                name: "iPhone 16 Pro Max 256GB Titan Tự Nhiên",
+                category: "Công nghệ",
+                price: 34990000,
+                originalPrice: 37990000,
+                image: "https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=600&q=80",
+                badge: "HOT",
+                rating: 4.9,
+                description: "Siêu phẩm điện thoại mới nhất trang bị chip A18 Pro cực kỳ mạnh mẽ, màn hình OLED 120Hz ProMotion đỉnh cao."
+            },
+            {
+                id: 2,
+                name: "Tai nghe Bluetooth chống ồn Sony WH-1000XM5",
+                category: "Phụ kiện",
+                price: 7490000,
+                originalPrice: 8990000,
+                image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=600&q=80",
+                badge: "SALE",
+                rating: 4.8,
+                description: "Tai nghe trùm đầu hàng đầu với khả năng chống ồn chủ động ANC tuyệt hảo, thời lượng pin 30 giờ liên tục."
+            },
+            {
+                id: 3,
+                name: "Áo Khoác Bomber Cyberpunk Streetwear Limited",
+                category: "Thời trang",
+                price: 890000,
+                originalPrice: 1200000,
+                image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=600&q=80",
+                badge: "MỚI",
+                rating: 4.7,
+                description: "Áo khoác bomber thời trang chất liệu cao cấp chống nước nhẹ, thiết kế cá tính chuẩn phong cách hiện đại."
+            },
+            {
+                id: 4,
+                name: "Giày Sneaker Retro Nova Streetwear White/Blue",
+                category: "Thời trang",
+                price: 1450000,
+                originalPrice: 1850000,
+                image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80",
+                badge: "BESTSELLER",
+                rating: 4.9,
+                description: "Sneaker thiết kế trẻ trung, đế cao su êm ái hỗ trợ vận động thoải mái suốt cả ngày dài."
+            },
+            {
+                id: 5,
+                name: "Đồng Hồ Smartwatch Nova Ultra Pro 49mm Titan",
+                category: "Công nghệ",
+                price: 3290000,
+                originalPrice: 4500000,
+                image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=600&q=80",
+                badge: "HOT",
+                rating: 4.6,
+                description: "Đồng hồ thông minh đo nhịp tim, nồng độ oxy trong máu SpO2, chống nước 5ATM kèm GPS độc lập."
+            },
+            {
+                id: 6,
+                name: "Bàn Phím Cơ Không Dây Custom RGB Hotswap",
+                category: "Phụ kiện",
+                price: 1890000,
+                originalPrice: 2300000,
+                image: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=600&q=80",
+                badge: "NEW",
+                rating: 4.9,
+                description: "Bàn phím cơ gõ êm, hỗ trợ kết nối Bluetooth / 2.4Ghz / Type-C linh hoạt cho Mac và Windows."
+            }
+        ];
+
+        function ecommerceApp() {
+            return {
+                // Application State
+                products: [],
+                cart: [],
+                orders: [],
+                categories: [
+                    { id: 'all', name: 'Tất cả sản phẩm' },
+                    { id: 'Công nghệ', name: 'Công nghệ' },
+                    { id: 'Thời trang', name: 'Thời trang' },
+                    { id: 'Phụ kiện', name: 'Phụ kiện' },
+                    { id: 'Gia dụng', name: 'Gia dụng' }
+                ],
+                searchQuery: '',
+                selectedCategory: 'all',
+                sortBy: 'default',
+                
+                // Modals & UI Controls
+                cartOpen: false,
+                checkoutOpen: false,
+                orderSuccessOpen: false,
+                detailModalOpen: false,
+                adminOpen: false,
+                adminLoginOpen: false,
+                adminTab: 'products',
+                selectedProduct: null,
+                modalQty: 1,
+
+                // Admin Authentication State
+                isAdminLoggedIn: false,
+                showPassword: false,
+                adminCredentials: {
+                    username: 'admin',
+                    password: 'password123'
+                },
+                loginForm: {
+                    username: '',
+                    password: ''
+                },
+                accountForm: {
+                    newUsername: 'admin',
+                    currentPassword: '',
+                    newPassword: '',
+                    confirmPassword: ''
+                },
+                confirmModal: {
+                    open: false,
+                    message: '',
+                    callback: null
+                },
+
+                // Forms
+                couponInput: '',
+                appliedCoupon: null,
+                checkoutForm: {
+                    name: '',
+                    phone: '',
+                    address: '',
+                    paymentMethod: 'COD'
+                },
+                productForm: {
+                    id: null,
+                    name: '',
+                    category: 'Công nghệ',
+                    price: '',
+                    originalPrice: '',
+                    image: '',
+                    badge: '',
+                    description: ''
+                },
+
+                // Notifications
+                toasts: [],
+
+                // Initialization
+                initApp() {
+                    const savedProducts = localStorage.getItem('nova_products');
+                    this.products = savedProducts ? JSON.parse(savedProducts) : DEFAULT_PRODUCTS;
+                    
+                    const savedCart = localStorage.getItem('nova_cart');
+                    this.cart = savedCart ? JSON.parse(savedCart) : [];
+
+                    const savedOrders = localStorage.getItem('nova_orders');
+                    this.orders = savedOrders ? JSON.parse(savedOrders) : [];
+
+                    // Load Admin Credentials & Session
+                    const savedAdminCreds = localStorage.getItem('nova_admin_creds');
+                    if (savedAdminCreds) {
+                        this.adminCredentials = JSON.parse(savedAdminCreds);
+                    } else {
+                        this.adminCredentials = { username: 'admin', password: 'password123' };
+                        this.adminCredentials.password = 'admin123';
+                        localStorage.setItem('nova_admin_creds', JSON.stringify(this.adminCredentials));
+                    }
+                    this.accountForm.newUsername = this.adminCredentials.username;
+
+                    const savedSession = sessionStorage.getItem('nova_admin_logged_in');
+                    if (savedSession === 'true') {
+                        this.isAdminLoggedIn = true;
+                    }
+                },
+
+                // Custom Confirmation Helper
+                requestConfirm(message, callback) {
+                    this.confirmModal = {
+                        open: true,
+                        message,
+                        callback
+                    };
+                },
+                executeConfirm() {
+                    if (typeof this.confirmModal.callback === 'function') {
+                        this.confirmModal.callback();
+                    }
+                    this.confirmModal.open = false;
+                },
+
+                // Admin Authentication Handlers
+                loginAdmin() {
+                    if (
+                        this.loginForm.username.trim() === this.adminCredentials.username &&
+                        this.loginForm.password === this.adminCredentials.password
+                    ) {
+                        this.isAdminLoggedIn = true;
+                        sessionStorage.setItem('nova_admin_logged_in', 'true');
+                        this.adminLoginOpen = false;
+                        this.loginForm = { username: '', password: '' };
+                        this.adminOpen = true;
+                        this.adminTab = 'products';
+                        this.showToast(`Chào mừng Admin "${this.adminCredentials.username}" đăng nhập!`);
+                    } else {
+                        this.showToast('Sai tên đăng nhập hoặc mật khẩu Admin!', 'error');
+                    }
+                },
+                logoutAdmin() {
+                    this.isAdminLoggedIn = false;
+                    sessionStorage.removeItem('nova_admin_logged_in');
+                    this.adminOpen = false;
+                    this.showToast('Đã đăng xuất khỏi tài khoản quản trị', 'info');
+                },
+                changeAdminCredentials() {
+                    if (this.accountForm.currentPassword !== this.adminCredentials.password) {
+                        this.showToast('Mật khẩu hiện tại không chính xác!', 'error');
+                        return;
+                    }
+                    if (this.accountForm.newPassword.length < 6) {
+                        this.showToast('Mật khẩu mới phải có ít nhất 6 ký tự!', 'error');
+                        return;
+                    }
+                    if (this.accountForm.newPassword !== this.accountForm.confirmPassword) {
+                        this.showToast('Xác nhận mật khẩu mới không khớp!', 'error');
+                        return;
+                    }
+                    this.adminCredentials = {
+                        username: this.accountForm.newUsername.trim() || 'admin',
+                        password: this.accountForm.newPassword
+                    };
+                    localStorage.setItem('nova_admin_creds', JSON.stringify(this.adminCredentials));
+                    this.accountForm.currentPassword = '';
+                    this.accountForm.newPassword = '';
+                    this.accountForm.confirmPassword = '';
+                    this.showToast('Đã cập nhật thông tin tài khoản Admin thành công!');
+                },
+
+                // Persistence Helpers
+                saveProducts() {
+                    localStorage.setItem('nova_products', JSON.stringify(this.products));
+                },
+                saveCart() {
+                    localStorage.setItem('nova_cart', JSON.stringify(this.cart));
+                },
+                saveOrders() {
+                    localStorage.setItem('nova_orders', JSON.stringify(this.orders));
+                },
+
+                // Notifications
+                showToast(message, type = 'success') {
+                    const id = Date.now();
+                    this.toasts.push({ id, message, type, show: true });
+                    setTimeout(() => {
+                        this.toasts = this.toasts.filter(t => t.id !== id);
+                    }, 3500);
+                },
+
+                // Filtered Products Getter
+                get filteredProducts() {
+                    return this.products.filter(p => {
+                        const matchesCategory = this.selectedCategory === 'all' || p.category === this.selectedCategory;
+                        const matchesSearch = p.name.toLowerCase().includes(this.searchQuery.toLowerCase()) || 
+                                              p.category.toLowerCase().includes(this.searchQuery.toLowerCase());
+                        return matchesCategory && matchesSearch;
+                    }).sort((a, b) => {
+                        if (this.sortBy === 'price-asc') return a.price - b.price;
+                        if (this.sortBy === 'price-desc') return b.price - a.price;
+                        return 0;
+                    });
+                },
+
+                resetFilters() {
+                    this.searchQuery = '';
+                    this.selectedCategory = 'all';
+                    this.sortBy = 'default';
+                },
+
+                // Currency Formatter
+                formatCurrency(amount) {
+                    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+                },
+
+                // Cart Operations
+                addToCart(product, quantity = 1) {
+                    const existingIndex = this.cart.findIndex(item => item.product.id === product.id);
+                    if (existingIndex > -1) {
+                        this.cart[existingIndex].quantity += quantity;
+                    } else {
+                        this.cart.push({ product, quantity });
+                    }
+                    this.saveCart();
+                    this.showToast(`Đã thêm "${product.name}" vào giỏ hàng!`);
+                },
+
+                updateCartQty(index, change) {
+                    this.cart[index].quantity += change;
+                    if (this.cart[index].quantity <= 0) {
+                        this.cart.splice(index, 1);
+                    }
+                    this.saveCart();
+                },
+
+                removeFromCart(index) {
+                    this.cart.splice(index, 1);
+                    this.saveCart();
+                    this.showToast('Đã xóa sản phẩm khỏi giỏ hàng', 'info');
+                },
+
+                get cartTotalItems() {
+                    return this.cart.reduce((sum, item) => sum + item.quantity, 0);
+                },
+                get cartSubtotal() {
+                    return this.cart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+                },
+                get cartDiscount() {
+                    if (!this.appliedCoupon) return 0;
+                    return Math.round(this.cartSubtotal * (this.appliedCoupon.discountPercent / 100));
+                },
+                get shippingFee() {
+                    if (this.cartSubtotal > 1000000 || (this.appliedCoupon && this.appliedCoupon.freeShip)) return 0;
+                    return 30000;
+                },
+                get cartTotal() {
+                    return Math.max(0, this.cartSubtotal - this.cartDiscount + this.shippingFee);
+                },
+
+                applyCoupon() {
+                    const code = this.couponInput.trim().toUpperCase();
+                    if (code === 'GIAM10') {
+                        this.appliedCoupon = { code: 'GIAM10', discountPercent: 10, freeShip: false };
+                        this.showToast('Áp dụng mã giảm 10% thành công!');
+                    } else if (code === 'FREESHIP') {
+                        this.appliedCoupon = { code: 'FREESHIP', discountPercent: 0, freeShip: true };
+                        this.showToast('Áp dụng miễn phí vận chuyển thành công!');
+                    } else {
+                        this.showToast('Mã giảm giá không hợp lệ!', 'error');
+                    }
+                    this.couponInput = '';
+                },
+
+                // Product Detail Modal
+                openDetailModal(product) {
+                    this.selectedProduct = product;
+                    this.modalQty = 1;
+                    this.detailModalOpen = true;
+                },
+
+                // Checkout Process
+                processCheckout() {
+                    if (this.cart.length === 0) return;
+
+                    const newOrder = {
+                        id: Date.now().toString().slice(-6),
+                        date: new Date().toLocaleString('vi-VN'),
+                        customer: { ...this.checkoutForm },
+                        items: [...this.cart],
+                        total: this.cartTotal,
+                        status: 'Chờ xác nhận'
+                    };
+
+                    this.orders.unshift(newOrder);
+                    this.saveOrders();
+
+                    // Reset state
+                    this.cart = [];
+                    this.saveCart();
+                    this.checkoutOpen = false;
+                    this.orderSuccessOpen = true;
+                    this.checkoutForm = { name: '', phone: '', address: '', paymentMethod: 'COD' };
+                },
+
+                // Admin Dashboard Operations
+                openAdminModal() {
+                    if (!this.isAdminLoggedIn) {
+                        this.loginForm = { username: '', password: '' };
+                        this.adminLoginOpen = true;
+                        return;
+                    }
+                    this.adminOpen = true;
+                    this.adminTab = 'products';
+                },
+                openAddProductForm() {
+                    this.productForm = { id: null, name: '', category: 'Công nghệ', price: '', originalPrice: '', image: '', badge: '', description: '' };
+                    this.adminTab = 'form';
+                },
+                editProduct(product) {
+                    this.productForm = { ...product };
+                    this.adminTab = 'form';
+                },
+                deleteProduct(id) {
+                    this.products = this.products.filter(p => p.id !== id);
+                    this.saveProducts();
+                    this.showToast('Đã xóa sản phẩm thành công', 'info');
+                },
+                saveProduct() {
+                    if (this.productForm.id) {
+                        const idx = this.products.findIndex(p => p.id === this.productForm.id);
+                        if (idx > -1) {
+                            this.products[idx] = { ...this.productForm, price: Number(this.productForm.price), originalPrice: Number(this.productForm.originalPrice || 0) };
+                        }
+                        this.showToast('Đã cập nhật sản phẩm!');
+                    } else {
+                        const newProd = {
+                            ...this.productForm,
+                            id: Date.now(),
+                            price: Number(this.productForm.price),
+                            originalPrice: Number(this.productForm.originalPrice || 0),
+                            rating: 5.0
+                        };
+                        this.products.unshift(newProd);
+                        this.showToast('Đã đăng sản phẩm mới thành công!');
+                    }
+                    this.saveProducts();
+                    this.adminTab = 'products';
+                },
+                handleFileUpload(event) {
+                    const file = event.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            this.productForm.image = e.target.result;
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                },
+                resetDefaultProducts() {
+                    this.products = DEFAULT_PRODUCTS;
+                    this.saveProducts();
+                    this.showToast('Đã khôi phục sản phẩm mẫu!');
+                },
+                exportData() {
+                    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.products, null, 2));
+                    const downloadAnchor = document.createElement('a');
+                    downloadAnchor.setAttribute("href", dataStr);
+                    downloadAnchor.setAttribute("download", "nova_store_products.json");
+                    document.body.appendChild(downloadAnchor);
+                    downloadAnchor.click();
+                    downloadAnchor.remove();
+                }
+            }
+        }
+    </script>
+</body>
+</html>
